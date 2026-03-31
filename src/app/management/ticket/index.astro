@@ -1,8 +1,11 @@
 ---
 import Rootlayout from "@/layouts/Rootlayout.astro";
-import { TicketComponent } from "./TicketComponent";
+import { TicketManagement } from "./Ticket";
+import { ManagementLayout } from "@/layouts/ManagementLayout";
 ---
 
 <Rootlayout>
-  <TicketComponent client:only="react"/>
+  <ManagementLayout client:only="react">
+      <TicketManagement client:only="react"/>
+  </ManagementLayout>
 </Rootlayout>

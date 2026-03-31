@@ -5,6 +5,7 @@ import { useLocalStorage } from './useLocalStorage';
 import useCookie from './useCookie';
 import { useAuthStore } from './authStore';
 import { PUBLIC_API_BASE_URL } from '@/constants/constant';
+import { message } from 'antd';
 
 interface SignInData {
   username: string
@@ -16,7 +17,7 @@ interface SignUpData extends SignInData {
 }
 
 export default function Sign() {
-  const { login, logout, token, payload } = useAuthStore()
+  const { login, logout, token, payload, getUserRole } = useAuthStore()
 
   const [isSignIn, setIsSignIn] = useState(true)
   const [formData, setFormData] = useState<SignInData>({
@@ -25,24 +26,36 @@ export default function Sign() {
   })
 
   const signInMutation = useMutation({
-    mutationFn: async (data: SignInData) => {
+    mutationFn: async (request: SignInData) => {
       const response = await fetch(`${PUBLIC_API_BASE_URL}/auth/sign-in`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(request)
       })
-      return response.json()
+      let data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Đăng nhập thất bại');
+      }
+
+      return data
     }
   }, queryClient)
 
   const signUpMutation = useMutation({
-    mutationFn: async (data: SignUpData) => {
+    mutationFn: async (request: SignUpData) => {
       const response = await fetch(`${PUBLIC_API_BASE_URL}/auth/sign-up`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(request)
       })
-      return response.json()
+      let data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Đăng nhập thất bại');
+      }
+
+      return data
     }
   }, queryClient)
 
@@ -54,12 +67,30 @@ export default function Sign() {
           if (res.data?.access_token) {
             console.log("Updating token...")
             login(res.data.access_token)
-            window.location.href = '/user';
+            
+            const userRole = getUserRole();
+            if (userRole === 'AGENT' || userRole === 'ADMIN') {
+              window.location.href = '/management';
+            } else {
+              window.location.href = '/user';
+            }
           }
+        },
+        onError: (error: any) => {
+          message.error(error.message || 'Đăng nhập thất bại. Vui lòng thử lại.')
+
         }
       })
     } else {
-      signUpMutation.mutate({ ...formData, confirmPassword: formData.password })
+      signUpMutation.mutate({ ...formData, confirmPassword: formData.password }, {
+        onSuccess: (res: any) => {
+          message.success(res.message)
+          setIsSignIn(true)
+        },
+        onError: (error: any) => {
+          message.error(error.message || 'Đăng ký thất bại. Vui lòng thử lại.')
+        }
+      })
     }
   }
 
@@ -67,7 +98,7 @@ export default function Sign() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
         <h2 className="text-2xl font-bold mb-6 text-center">
-          {isSignIn ? 'Sign In' : 'Sign Up'}
+          {isSignIn ? 'Đăng ký' : 'Đăng nhập'}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -98,7 +129,7 @@ export default function Sign() {
             disabled={signInMutation.isPending || signUpMutation.isPending}
             className="w-full py-2 px-4 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
           >
-            {signInMutation.isPending || signUpMutation.isPending ? 'Loading...' : isSignIn ? 'Sign In' : 'Sign Up'}
+            {signInMutation.isPending || signUpMutation.isPending ? '...' : isSignIn ? 'Đăng nhập' : 'Đăng ký'}
           </button>
         </form>
 
@@ -106,10 +137,10 @@ export default function Sign() {
           onClick={() => setIsSignIn(!isSignIn)}
           className="w-full mt-4 text-blue-500 hover:underline"
         >
-          {isSignIn ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
+          {isSignIn ? "Chưa có tài khoản? Hãy đăng ký" : 'Đã có tài khoản? Đăng nhập'}
         </button>
 
-        <div>{JSON.stringify(payload)}</div>
+        {/* <div>{JSON.stringify(payload)}</div> */}
       </div>
     </div>
   )

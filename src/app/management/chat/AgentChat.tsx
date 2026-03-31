@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, queryClient } from "@/lib/ReactQuery";
 import { ManagementLayout } from "@/layouts/ManagementLayout";
 import { Layout, Avatar, Typography, Empty, Spin, Button, Image, message, Badge } from "antd";
 import { MessageOutlined, SendOutlined, PaperClipOutlined, UserOutlined, RobotOutlined, CloseOutlined, FileTextOutlined } from "@ant-design/icons";
+import { PUBLIC_API_BASE_URL, PUBLIC_WS_BASE_URL } from "@/constants/constant"
+import { useAuthStore } from "@/app/auth/authStore";
+import { logger } from "@/utils/logger";
 
 // INTERFACES
 export interface Message {
@@ -14,6 +17,7 @@ export interface Message {
 
 export interface Conversation {
   conversation_key: string;
+  username: string
   last_message?: string;
   timestamp?: string;
 }
@@ -24,19 +28,16 @@ export interface ConversationItemProps {
   onClick: (key: string) => void;
 }
 
-export interface MessageBubbleProps {
+interface MessageBubbleProps {
   msg: Message;
+  agentId: string;
 }
 
 export interface ChatRoomProps {
+  userId: string
   conversationKey: string;
   initialMessages: Message[];
 }
-
-// 3. CONSTANTS
-import { PUBLIC_API_BASE_URL, PUBLIC_WS_BASE_URL } from "@/constants/constant"
-
-const AGENT_ID = "bf529acd-fb41-11f0-b4a6-82c666d71d92";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const API = {
@@ -46,7 +47,7 @@ const API = {
 } as const
 
 const WS = {
-    websocket: (agentId: string, conversationKey: string) => `${PUBLIC_WS_BASE_URL}/ws/${agentId}/${conversationKey}`
+  websocket: (agentId: string, conversationKey: string) => `${PUBLIC_WS_BASE_URL}/ws/${agentId}/${conversationKey}`
 } as const
 
 const STYLES = {
@@ -75,13 +76,9 @@ const STYLES = {
   fileRemoveBtn: { position: "absolute", top: "-6px", right: "-6px", minWidth: "auto" } as const
 } as const;
 
-export {
-  STYLES, MAX_FILE_SIZE, API, WS, AGENT_ID
-}
-
 // 4. UTILITY FUNCTIONS
-const createPayload = (type: string, content: string, key: string) =>
-  JSON.stringify({ type, sender_id: AGENT_ID, conversation_key: key, content });
+const createPayload = (type: string, content: string, key: string, senderId: string) =>
+  JSON.stringify({ type, sender_id: senderId, conversation_key: key, content });
 
 const getFilenameFromUrl = (url: string) => {
   const parts = url.split('/');
@@ -162,17 +159,20 @@ interface UseChatSocketReturn {
   sendMessage: (payload: string) => void;
 }
 
-function useChatSocket(conversationKey: string, onMessage: (msg: Message) => void): UseChatSocketReturn {
+function useWebSocket(
+  agentId: string, 
+  conversationKey: string, 
+  onMessage: (msg: Message) => void
+): UseChatSocketReturn {
+  const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     if (!conversationKey) return;
 
-    // Close existing connection
     wsRef.current?.close();
 
-    // Create new WebSocket connection
-    const ws = new WebSocket(WS.websocket(AGENT_ID, conversationKey));
+    const ws = new WebSocket(WS.websocket(agentId, conversationKey));
     wsRef.current = ws;
 
     // WebSocket event handlers
@@ -215,14 +215,7 @@ function useChatSocket(conversationKey: string, onMessage: (msg: Message) => voi
   return { sendMessage };
 }
 
-// 6. API FUNCTIONS
-interface ApiResponse<T> {
-  message: string;
-  data: T;
-  status_code: number;
-}
-
-async function fetchConversationKeys(userId: string): Promise<ApiResponse<Conversation[]>> {
+async function fetchConversationKeys(userId: string) {
   if (!userId) return { message: "", data: [], status_code: 400 };
 
   const response = await fetch(API.CONVERSATION_KEY(userId));
@@ -232,10 +225,11 @@ async function fetchConversationKeys(userId: string): Promise<ApiResponse<Conver
   }
 
   const data = await response.json();
+  logger.info(data)
   return data;
 }
 
-async function fetchConversationMessages(conversationKey: string): Promise<ApiResponse<Message[]>> {
+async function fetchConversationMessages(conversationKey: string) {
   if (!conversationKey) return { message: "", data: [], status_code: 400 };
 
   const response = await fetch(API.MESSAGES(conversationKey));
@@ -245,6 +239,7 @@ async function fetchConversationMessages(conversationKey: string): Promise<ApiRe
   }
 
   const data = await response.json();
+
   return data;
 }
 
@@ -266,10 +261,10 @@ async function uploadFilesToServer(files: File[]) {
 }
 
 export function useFileUpload() {
-  const { 
-    mutateAsync: upload, 
+  const {
+    mutateAsync: upload,
     isPending: isUploading,
-    error: uploadError 
+    error: uploadError
   } = useMutation({
     mutationFn: uploadFilesToServer,
   }, queryClient);
@@ -292,17 +287,14 @@ const ConversationItem = ({ conv, active, onClick }: ConversationItemProps) => (
         <Avatar icon={<MessageOutlined />} style={{ background: "#1890ff" }} />
       </Badge>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <Typography.Text ellipsis>{conv.conversation_key}</Typography.Text>
-        <Typography.Text type="secondary" style={{ fontSize: "12px" }}>
-          ID: {conv.conversation_key}
-        </Typography.Text>
+        <Typography.Text ellipsis>{conv.username}</Typography.Text>
       </div>
     </div>
   </div>
 );
 
-const MessageBubble = ({ msg }: MessageBubbleProps) => {
-  const isAgent = msg.sender_id === AGENT_ID;
+const MessageBubble = ({ msg, agentId }: MessageBubbleProps) => {
+  const isAgent = msg.sender_id === agentId;
   const isUrl = typeof msg.content === "string" && msg.content.startsWith("http");
   const isImage = isUrl && isImageUrl(msg.content);
   const isDocument = isUrl && isDocumentUrl(msg.content);
@@ -329,14 +321,22 @@ const MessageBubble = ({ msg }: MessageBubbleProps) => {
 };
 
 // 8. MAIN COMPONENTS
-function ChatRoom({ conversationKey, initialMessages }: ChatRoomProps) {
+function ChatRoom({userId, conversationKey, initialMessages }: ChatRoomProps) {
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { sendMessage: sendWS } = useChatSocket(conversationKey, (msg) => setMessages(prev => [...prev, msg]));
+  const handleChatMessage = (msg: Message) => {
+    setMessages(prev => [...prev, msg]);
+  }
+
+  const { sendMessage: sendWS } = useWebSocket(
+    userId, 
+    conversationKey, 
+    handleChatMessage
+  );
   const { upload, isUploading, uploadError } = useFileUpload();
 
   useEffect(() => {
@@ -404,7 +404,7 @@ function ChatRoom({ conversationKey, initialMessages }: ChatRoomProps) {
     if (!text && previews.length === 0) return;
 
     if (text) {
-      const payload = createPayload("message", text, conversationKey);
+      const payload = createPayload("message", text, conversationKey, userId);
       sendWS(payload);
       console.log(payload);
       setMessages(prev => [...prev, JSON.parse(payload)]);
@@ -415,7 +415,7 @@ function ChatRoom({ conversationKey, initialMessages }: ChatRoomProps) {
       try {
         const res = await upload(files);
         res.data.urls.forEach((url: string) => {
-          const payload = createPayload("file", url, conversationKey);
+          const payload = createPayload("file", url, conversationKey, userId);
           sendWS(payload);
           setMessages(prev => [...prev, JSON.parse(payload)]);
         });
@@ -435,7 +435,7 @@ function ChatRoom({ conversationKey, initialMessages }: ChatRoomProps) {
           <Typography.Text strong>{conversationKey}</Typography.Text>
           <br />
           <Typography.Text type="secondary" style={{ fontSize: "12px" }}>
-            Agent: {AGENT_ID}
+            {/* Agent: {AGENT_ID} */}
           </Typography.Text>
         </div>
       </div>
@@ -446,7 +446,7 @@ function ChatRoom({ conversationKey, initialMessages }: ChatRoomProps) {
         ) : (
           <>
             {messages.map((m, i) => (
-              <MessageBubble key={i} msg={m} />
+              <MessageBubble key={i} msg={m} agentId={userId}/>
             ))}
           </>
         )}
@@ -522,45 +522,47 @@ function ChatRoom({ conversationKey, initialMessages }: ChatRoomProps) {
   );
 }
 
-export function useConversationData(activeKey: string) {
-  const { 
-    data: convs, 
+export function useConversationData(userId: string, activeKey: string) {
+  const {
+    data: convs_keys,
     isPending: convsLoading,
-    error: convError 
+    error: convError
   } = useQuery({
-    queryKey: ["conversations", AGENT_ID],
-    queryFn: () => fetchConversationKeys(AGENT_ID),
-    staleTime: 5 * 60 * 1000, 
+    queryKey: ["conversation_keys", userId],
+    queryFn: () => fetchConversationKeys(userId),
+    staleTime: 5 * 60 * 1000,
   }, queryClient);
 
-  const { 
-    data: msgs, 
+  const {
+    data: msgs,
     isPending: msgsLoading,
-    error: msgError 
+    error: msgError
   } = useQuery({
     queryKey: ["messages", activeKey],
     queryFn: () => fetchConversationMessages(activeKey),
     enabled: !!activeKey,
-    staleTime: 2 * 60 * 1000, 
+    staleTime: 2 * 60 * 1000,
   }, queryClient);
 
   return {
-    convs: convs?.data || [],
+    convs: convs_keys?.data || [],
     msgs: msgs?.data || [],
-    
+
     convsLoading,
     msgsLoading,
-    
+
     conversationError: convError,
     messageError: msgError,
-    
+
     isLoading: convsLoading || msgsLoading,
     hasError: !!convError || !!msgError,
   };
 }
 
-export function ConversationManager() {
+export function ConversationLayout() {
   const [activeKey, setActiveKey] = useState("");
+  const { payload } = useAuthStore()
+  const userId = payload?.user_id || ""
 
   const {
     convs,
@@ -568,7 +570,8 @@ export function ConversationManager() {
     convsLoading,
     msgsLoading,
     messageError,
-  } = useConversationData(activeKey);
+  } = useConversationData(userId, activeKey);
+  logger.info(convs)
 
   if (convsLoading) {
     return (
@@ -619,6 +622,7 @@ export function ConversationManager() {
               key={activeKey}
               conversationKey={activeKey}
               initialMessages={msgs}
+              userId={userId}
             />
           )}
         </Layout.Content>

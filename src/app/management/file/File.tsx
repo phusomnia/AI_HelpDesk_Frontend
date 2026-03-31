@@ -7,28 +7,21 @@ import { Button, Form, Modal, notification, Table } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { AttachementHandler } from "./handler";
 
-// CONSTANT
-const STORAGE_FOLDER = "system"
-
-export function UploadFileComponent() {
+export function FileLayout() {
   return <>
     <ManagementLayout>
-      <UploadFileClient />
+      <FileManagement />
     </ManagementLayout>
   </>
 }
 
-export function UploadFileClient() {
+export function FileManagement() {
   const [globalParams, setGlobalParams] = useState(
     () => new URLSearchParams(window.location.search),
   );
 
   const [params, setParams] = useState({
-    ...defaultParams(globalParams),
-    // department_name: globalParams.get('department_name') || '',
-    // status: globalParams.get('status') || '',
-    // category: globalParams.get('category') || '',
-    // priority: globalParams.get('priority') || '',
+    ...defaultParams(globalParams)
   });
 
   const [modalVisible, setModalVisible] = useState(false);

@@ -1,14 +1,6 @@
 import {
-  Input,
-  Pagination,
-  Select,
   Space,
-  Table,
-  Modal,
   Button,
-  Form,
-  notification,
-  Popconfirm,
 } from "antd";
 
 export const ticketColumns = (props: any) => [
@@ -56,8 +48,8 @@ export const ticketColumns = (props: any) => [
         >
           Cập nhật
         </Button>
-
-        <Popconfirm
+        
+        {/* <Popconfirm
           title="Xóa sản phẩm?"
           description="Bạn có chắc muốn xóa sản phẩm này?"
           okText="Xóa"
@@ -88,7 +80,8 @@ export const ticketColumns = (props: any) => [
           <Button type="link" danger>
             Xóa
           </Button>
-        </Popconfirm>
+        </Popconfirm> */}
+        
       </Space>
     ),
   },

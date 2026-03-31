@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { defaultParams, PUBLIC_API_BASE_URL } from "@/constants/constant.ts";
-import { queryClient, useMutation, useQuery } from "@/lib/ReactQuery";
+import { defaultParams } from "@/constants/constant.ts";
 import {
   Input,
   Select,
@@ -15,17 +14,9 @@ import TextArea from 'antd/es/input/TextArea';
 import dayjs from 'dayjs';
 import { useCreateTicket, useDeleteTicket, useEditTicket, useTickets } from './useTickets.ts';
 import { useDepartments } from './useDeparments.ts';
-import { ManagementLayout } from '@/layouts/ManagementLayout.tsx';
+import { logger } from '@/utils/logger.ts';
 
-export function TicketComponent() {
-  return <>
-    <ManagementLayout>
-      <TicketClient />
-    </ManagementLayout>
-  </>
-}
-
-export function TicketClient() {
+export function TicketManagement() {
   const [globalParams, setGlobalParams] = useState(
     () => new URLSearchParams(window.location.search),
   );
@@ -114,7 +105,7 @@ export function TicketClient() {
             defaultValue={params.department_name || null}
             onChange={(value) => setParams({ ...params, department_name: value })}
             options={[
-              { value: 'Ki_thuat', label: 'Phòng kỹ thuật' },
+              { value: 'KiThuat', label: 'Phòng kĩ thuật' },
               { value: 'Marketing', label: 'Phòng marketing' },
             ]}
           />
@@ -160,7 +151,7 @@ export function TicketClient() {
             pageSize: tickets?.data.page_size,
             total: tickets?.data.total_elements,
             showSizeChanger: true,
-            pageSizeOptions: ['5', '10', '20', '50'],
+            pageSizeOptions: ['5', '10', '20'],
             showQuickJumper: true,
             showTotal: (total: any, range: any) =>
               `${range[0]}-${range[1]} trong ${total} mục`,
@@ -256,44 +247,50 @@ function TicketModal(props: any): any {
     try {
       let values = await form.validateFields();
 
-      if (values.due_date) {
-        values.due_date = values.due_date.format('YYYY-MM-DD HH:mm:ss');
+      if (values.due_date && typeof values.due_date.format === 'function') {
+        values.due_date = values.due_date.format('YYYY-MM-DDTHH:mm:ss');
+      } else {
+        values.due_date = null;
       }
 
       if (props.type === 'add') {
-
-        const payload_raw = { ...values, dept_id: selectedDepartmentId }
-        console.log(payload_raw)
-
         const payload = new FormData();
-        payload.append("ticket", JSON.stringify(payload_raw))
+        const createTicketRequest = {
+          subject: values.subject,
+          description: values.description,
+          category: values.category,
+          priority: values.priority,
+          dept_id: selectedDepartmentId,
+          customer_id: values.customer_id,
+          due_date: values.due_date
+        };
+        logger.info(createTicketRequest)
+
+        payload.append("ticket", JSON.stringify(createTicketRequest));
         selectedFiles.forEach((file) => {
-          payload.append(`attachments`, file);
+          payload.append("attachments", file);
         });
 
-        console.log(Object.fromEntries(payload));
-
-        await createTicketMutation.mutateAsync(payload)
+        
+        await createTicketMutation.mutateAsync(payload, {
+          onSuccess: () => props.onCancel()
+        });
       }
+
       if (props.type === 'edit') {
-        const payload_raw = { ...props.selectedTicket, ...values, attachment_url: JSON.stringify(currentAttachments) }
-
-        console.log(payload_raw)
-
-        const payload = new FormData();
-        payload.append("ticket", JSON.stringify(payload_raw))
-        selectedFiles.forEach((file) => {
-          payload.append(`attachments`, file);
-        });
+        const payload = {
+          ...values,
+          ...props.selectedTicket,
+          dept_id: selectedDepartmentId || null,
+          attachment_url: null,
+          // attachment_url: JSON.stringify(currentAttachments) || null,
+        };
+        delete payload.id;
 
         await editTicketMutation.mutateAsync(
-          { id: props.selectedTicket.id, ticketData: payload },
-          {
-            onSuccess: () => {
-              props.onCancel();
-            }
-          }
-        )
+          { id: props.selectedTicket.id, editTicketRequest: payload },
+          { onSuccess: () => props.onCancel() }
+        );
       }
     } catch (error) {
       console.error('Validation failed:', error);
@@ -307,11 +304,6 @@ function TicketModal(props: any): any {
     console.log(files)
 
     files.forEach(file => {
-      // const reader = new FileReader();
-      // reader.onload = (e) => {
-      //   setFilePreviews(prev => [...prev, e.target?.result as string]);
-      // };
-      // reader.readAsDataURL(file);
       if (file.type.startsWith("image/")) {
         const url = URL.createObjectURL(file);
         setFilePreviews(prev => [...prev, url]);
@@ -339,7 +331,7 @@ function TicketModal(props: any): any {
     setCurrentAttachments(updatedAttachments);
   };
 
-  const renderExistingAttachments = () => {
+  const renderExistingAttachments = (type: string) => {
     return (
       <div>
         {currentAttachments.map((item: any, index: number) => (
@@ -347,11 +339,13 @@ function TicketModal(props: any): any {
             <a href={item.url} target="_blank" rel="noopener noreferrer">
               {item.url.split('_').pop() || `File ${index + 1}`}
             </a>
-            <button
-              onClick={() => removeCurrentAttachment(item.url.split('/').pop())}
-            >
-              x
-            </button>
+            {type === 'edit' && (
+              <button
+                onClick={() => removeCurrentAttachment(item.url.split('/').pop())}
+              >
+                x
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -390,29 +384,33 @@ function TicketModal(props: any): any {
           >
             <Input placeholder="Nhập tiêu đề ticket" />
           </Form.Item>
-          {/*  */}
+          {/* CATEGORY  */}
           <Form.Item
             name="category"
             label="Danh mục"
-          // rules={[{ required: true, message: 'Vui lòng chọn danh mục!' }]}
           >
-            <Select placeholder="Chọn danh mục"
-              options={[
-                {
-                  label: 'Mức độ ưu tiên',
-                  options: [
-                    { label: 'Thấp', value: 'LOW' },
-                    { label: 'Trung bình', value: 'MEDIUM' },
-                    { label: 'Cao', value: 'HIGH' },
-                    { label: 'Khẩn cấp', value: 'URGENT' },
-                  ],
-                },
-              ]}
-            >
-            </Select>
+            <Input placeholder="Nhập danh mục" />
           </Form.Item>
 
-          {/* Priority */}
+          {props.type === "edit" && <>
+            {/* STATUS */}
+            <Form.Item
+              name="status"
+              label="Trạng thái"
+            >
+              <Select placeholder="Chọn trạng thái"
+                options={[
+                  { label: 'Mở', value: 'OPEN' },
+                  { label: 'Đang xử lý', value: 'IN_PROGRESS' },
+                  { label: 'Đã giải quyết', value: 'RESOLVED' },
+                  { label: 'Đã đóng', value: 'CLOSED' },
+                ]}
+              >
+              </Select>
+            </Form.Item>
+          </>}
+
+          {/* PRIORITY */}
           <Form.Item
             name="priority"
             label="Mức độ ưu tiên"
@@ -482,9 +480,9 @@ function TicketModal(props: any): any {
           </Form.Item>
 
           {/* FILE */}
-          {props.type === 'edit' && (props.selectedTicket?.attachment_url) && (
+          {/* {(props.type === 'edit' || props.type === 'view') && (props.selectedTicket?.attachment_url) && (
             <div className="existing-attachments">
-              {renderExistingAttachments()}
+              {renderExistingAttachments(props.type)}
             </div>
           )}
           <div className='attachment'>
@@ -496,8 +494,9 @@ function TicketModal(props: any): any {
               accept="*"
               title="Chọn file để tải lên"
               className="sr-only"
-            />
-            <Button
+            /> */}
+
+          {/* <Button
               onChange={handleSelectedFile}
               onClick={() => {
                 fileInputRef.current?.click()
@@ -507,8 +506,8 @@ function TicketModal(props: any): any {
               block
             >
               Chọn file đính kèm
-            </Button>
-          </div>
+            </Button> */}
+          {/* </div> */}
           <div className='flex'>
             {filePreviews.length > 0 && (
               <div className="flex gap-2 p-2 overflow-x-auto">

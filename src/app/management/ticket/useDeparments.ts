@@ -8,7 +8,9 @@ async function fetchDeparments() {
 
   if (!response.ok) throw new Error("Lỗi khi tải dữ liệu chat");
 
-  return response.json();
+  const data = await response.json(); 
+
+  return data
 }
 
 export function useDepartments() {

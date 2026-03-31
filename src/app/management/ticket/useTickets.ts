@@ -1,47 +1,58 @@
 import { queryClient, useMutation, useQuery } from "@/lib/ReactQuery";
 import { PUBLIC_API_BASE_URL } from "@/constants/constant";
 import { notification } from "antd";
+import { logger } from "@/utils/logger";
 
 // GET
 async function fetchTickets(params: any) {
-    console.log(params);
+  console.log(params);
 
-    const queryParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value) queryParams.append(key, value.toString());
-    });
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) queryParams.append(key, value.toString());
+  });
 
   const response = await fetch(
     `${PUBLIC_API_BASE_URL}/tickets?${queryParams.toString()}`
   );
   if (!response.ok) throw new Error("Lỗi khi tải dữ liệu");
-  return response.json();
+
+  const data = await response.json()
+
+  return data
 }
 // POST
 async function createTicket(ticketData: FormData) {
-  const response = await fetch(`${PUBLIC_API_BASE_URL}/tickets/form`, {
+  const response = await fetch(`${PUBLIC_API_BASE_URL}/tickets/`, {
     method: 'POST',
     body: ticketData,
   });
   if (!response.ok) throw new Error("Lỗi khi tạo ticket");
-  return response.json();
+  let data = await response.json();
+  return data
 }
 // EDIT
 async function editTicket(props: any) {
-  const response = await fetch(`${PUBLIC_API_BASE_URL}/tickets/form/${props.id}`, {
+  logger.info(props.editTicketRequest)
+  const response = await fetch(`${PUBLIC_API_BASE_URL}/tickets/${props.id}`, {
     method: 'PUT',
-    body: props.ticketData,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(props.editTicketRequest),
   });
-  if (!response.ok) throw new Error("Lỗi khi tạo ticket");
-  return response.json();
+  if (!response.ok) throw new Error("Lỗi khi sửa ticket");
+  let data = await response.json();
+  return data
 }
 // DELETE
 async function deleteTicket(props: any) {
   const response = await fetch(`${PUBLIC_API_BASE_URL}/tickets/${props.id}`, {
     method: 'DELETE'
   });
-  if (!response.ok) throw new Error("Lỗi khi tạo ticket");
-  return response.json();
+  if (!response.ok) throw new Error("Lỗi khi xóa ticket");
+  let data = await response.json();
+  return data
 }
 
 // 
@@ -74,7 +85,7 @@ export function useCreateTicket() {
     },
   }, queryClient);
 }
-//
+//props.type === 'edit'
 export function useEditTicket() {
   return useMutation({
     mutationFn: editTicket,

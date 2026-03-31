@@ -1,35 +1,14 @@
 ---
 import Rootlayout from "@/layouts/Rootlayout.astro";
 import { ManagementLayout } from "@/layouts/ManagementLayout";
+import DashboardStats from "./dashboard/DashboardStats";
+import { RouteGuard } from "@/components/RouteGuard";
 ---
 
 <Rootlayout>
-  <ManagementLayout>
-    <div class="space-y-6">
-      <h1 class="text-3xl font-bold text-gray-900">Management Dashboard</h1>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white p-6 rounded-lg shadow">
-          <h2 class="text-xl font-semibold mb-2">Tickets</h2>
-          <p class="text-gray-600">Quản lý ticket hỗ trợ</p>
-          <a href="/management/ticket" class="mt-4 inline-block text-blue-600 hover:text-blue-800">
-            Xem chi tiết →
-          </a>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow">
-          <h2 class="text-xl font-semibold mb-2">Tài liệu</h2>
-          <p class="text-gray-600">Quản lý tài liệu, file</p>
-          <a href="/management/file" class="mt-4 inline-block text-blue-600 hover:text-blue-800">
-            Xem chi tiết →
-          </a>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow">
-          <h2 class="text-xl font-semibold mb-2">Chat</h2>
-          <p class="text-gray-600">Quản lý chat hỗ trợ</p>
-          <a href="/management/chat" class="mt-4 inline-block text-blue-600 hover:text-blue-800">
-            Xem chi tiết →
-          </a>
-        </div>
-      </div>
-    </div>
-  </ManagementLayout>
+  <RouteGuard client:only="react">
+    <ManagementLayout client:only="react">
+      <DashboardStats client:only="react" />
+    </ManagementLayout>
+  </RouteGuard>
 </Rootlayout>

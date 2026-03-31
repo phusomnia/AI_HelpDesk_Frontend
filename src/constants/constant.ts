@@ -2,8 +2,9 @@ import { create } from "zustand";
 
 const PUBLIC_WS_BASE_URL = import.meta.env.PUBLIC_WS_BASE_URL;
 const PUBLIC_API_BASE_URL = import.meta.env.PUBLIC_API_BASE_URL;
+const PROJECT_ENV = import.meta.env.PUBLIC_PROJECT_ENV;
 
-export { PUBLIC_WS_BASE_URL, PUBLIC_API_BASE_URL };
+export { PUBLIC_WS_BASE_URL, PUBLIC_API_BASE_URL, PROJECT_ENV};
 
 export const defaultParams = (params: URLSearchParams) => ({
   page: Number(params.get('page')) || 1,

@@ -1,43 +1,57 @@
-# Astro Starter Kit: Minimal
+# AI HelpDesk Frontend
 
-```sh
-bun create astro@latest -- --template minimal
-```
-
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Hệ thống hỗ trợ khách hàng thông minh sử dụng AI, được xây dựng với Astro framework.
 
 ## 🚀 Project Structure
 
-Inside of your Astro project, you'll see the following folders and files:
+Cấu trúc thư mục của dự án AI HelpDesk Frontend:
 
 ```text
 /
-├── public/
+├── public/                     # Static assets (images, icons, etc.)
 ├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
-
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
+│   ├── app/                    # Các trang chính của ứng dụng
+│   │   ├── auth/              # Xác thực người dùng
+│   │   │   ├── login.astro
+│   │   │   └── register.astro
+│   │   ├── management/        # Quản trị viên
+│   │   │   ├── chat/
+│   │   │   ├── dashboard/
+│   │   │   └── settings/
+│   │   └── user/              # Giao diện người dùng
+│   │       ├── UserChat.tsx
+│   │       └── dashboard/
+│   ├── components/            # Components tái sử dụng
+│   │   ├── ui/               # UI components cơ bản
+│   │   ├── forms/            # Form components
+│   │   └── layout/           # Layout components
+│   ├── constants/            # Constants và configurations
+│   │   └── constant.ts
+│   ├── context/              # React Context providers
+│   ├── features/             # Feature-based modules
+│   ├── hooks/                # Custom React hooks
+│   ├── layouts/              # Astro layouts
+│   │   └── RootLayout.astro
+│   ├── lib/                  # Utility functions
+│   └── styles/               # Global styles
+├── .gitignore
+├── astro.config.mjs
+├── package.json
+└── tsconfig.json
 
 ## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
 | Command                   | Action                                           |
 | :------------------------ | :----------------------------------------------- |
-| `bun install`             | Installs dependencies                            |
-| `bun dev`             | Starts local dev server at `localhost:4321`      |
-| `bun build`           | Build your production site to `./dist/`          |
-| `bun preview`         | Preview your build locally, before deploying     |
-| `bun astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `bun astro -- --help` | Get help using the Astro CLI                     |
+| `bun install`             | Cài đặt dependencies                            |
+| `bun dev`                 | Khởi động dev server tại `localhost:4321`        |
+| `bun build`               | Build production site đến `./dist/`             |
+| `bun preview`             | Xem trước bản build trước khi deploy            |
+| `bun astro ...`           | Chạy CLI commands như `astro add`, `astro check` |
 
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+## 🛠 Tech Stack
+- **Framework**: Astro
+- **Language**: TypeScript
+- **Package Manager**: Bun
+- **Styling**: Tailwind CSS (nếu có)
+- **UI Components**: Custom components
+## 🚀 Deployment
