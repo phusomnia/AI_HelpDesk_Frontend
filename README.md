@@ -65,7 +65,7 @@ PUBLIC_PROJECT_ENV=development
 | Command                   | Action                                           |
 | :------------------------ | :----------------------------------------------- |
 | `bun install`             | Cài đặt dependencies                            |
-| `bun dev`                 | Khởi động dev server tại `localhost:4321`        |
+| `bun dev`                 | Khởi động dev server tại `localhost:3000`        |
 | `bun build`               | Build production site đến `./dist/`             |
 | `bun preview`             | Xem trước bản build trước khi deploy            |
 | `bun astro ...`           | Chạy CLI commands như `astro add`, `astro check` |

@@ -1,5 +1,4 @@
 import { useAuthStore } from '@/app/auth/authStore';
-import { useRoleNavigation } from '@/hooks/useRoleNavigation';
 
 interface MenuItem {
   label: string;
@@ -16,12 +15,10 @@ const menuItems: MenuItem[] = [
 ];
 
 export default function Sidebar() {
-  const { isAgent, isAdmin, getUserRole } = useAuthStore();
-  const { getDashboardUrl } = useRoleNavigation();
-  
+  const { getUserRole } = useAuthStore();
   const userRole = getUserRole();
 
-  const visibleMenuItems = menuItems.filter(item => 
+  const visibleMenuItems = menuItems.filter(item =>
     item.allowedRoles.includes(userRole as 'AGENT' | 'ADMIN')
   );
 
@@ -35,7 +32,7 @@ export default function Sidebar() {
         <h1 className="text-xl font-bold text-gray-800">AI HelpDesk</h1>
         <p className="text-sm text-gray-500">Management</p>
       </div>
-      
+
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
           {visibleMenuItems.map((item) => (
@@ -50,7 +47,7 @@ export default function Sidebar() {
           ))}
         </ul>
       </nav>
-      
+
       <div className="p-4 border-t">
         <button
           onClick={() => handleNavigation('/user')}

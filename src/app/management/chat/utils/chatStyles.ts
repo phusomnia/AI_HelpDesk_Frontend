@@ -1,0 +1,25 @@
+export const CHAT_STYLES = {
+  sidebar: { background: '#fff', borderRight: '1px solid #f0f0f0' } as const,
+  sidebarHeader: { padding: '16px', borderBottom: '1px solid #f0f0f0', background: '#fafafa' } as const,
+  conversationItem: (active: boolean) => ({
+    padding: '12px 16px',
+    borderBottom: '1px solid #f0f0f0',
+    cursor: 'pointer',
+    background: active ? '#e6f7ff' : 'transparent',
+    borderLeft: active ? '3px solid #1890ff' : 'none',
+  }) as const,
+  chatHeader: { padding: '16px', borderBottom: '1px solid #f0f0f0', background: '#fafafa', display: 'flex', alignItems: 'center', gap: '12px' } as const,
+  messagesArea: { flex: 1, padding: '16px', overflowY: 'auto', background: '#fafafa' } as const,
+  messageBubble: (isAgent: boolean) => ({
+    maxWidth: '100%',
+    padding: '10px 14px',
+    borderRadius: '0',
+    background: isAgent ? '#1890ff' : '#fff',
+    color: isAgent ? '#fff' : '#000',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+    wordBreak: 'break-all',
+  }) as const,
+  inputArea: { padding: '16px', borderTop: '1px solid #f0f0f0', background: '#fff' } as const,
+  filePreview: { position: 'relative' } as const,
+  fileRemoveBtn: { position: 'absolute', top: '-6px', right: '-6px', minWidth: 'auto' } as const,
+} as const;

@@ -1,6 +1,6 @@
-import { create } from 'zustand'
-import { jwtDecode } from 'jwt-decode'
-import useCookie, { deleteCookie, getCookie, setCookie } from './useCookie'
+import { create } from 'zustand';
+import { jwtDecode } from 'jwt-decode';
+import { deleteCookie, getCookie, setCookie } from './utils';
 
 export const useAuthStore = create<any>()(
   (set, get) => ({

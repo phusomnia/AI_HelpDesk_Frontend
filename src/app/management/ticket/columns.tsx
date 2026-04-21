@@ -2,6 +2,7 @@ import {
   Space,
   Button,
   Tag,
+  Tooltip,
 } from "antd";
 
 const statusColor: Record<string, string> = {
@@ -74,9 +75,6 @@ export const ticketColumns = (props: any) => [
         <Button
           onClick={() => {
             props.setSelectedTicket(record);
-            props.setModalType('view');
-            props.setModalVisible(true);
-            console.log("View ticket:", record);
           }}
         >
           Xem
@@ -85,10 +83,10 @@ export const ticketColumns = (props: any) => [
         <Button
           type="link"
           onClick={() => {
-            props.setSelectedTicket(record);
-            props.setModalType('edit');
-            props.setModalVisible(true);
-            console.log("Edit ticket:", record);
+            if (record.status === 'CLOSED' || record.status === 'RESOLVED') {
+              return;
+            }
+            props.setModalType('edit', record);
           }}
         >
           Cập nhật
